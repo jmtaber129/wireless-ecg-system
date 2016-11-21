@@ -40,7 +40,7 @@ void Configuration::ConfigureUart() {
 
 void Configuration::ConfigureTimer() {
   // Configure timer for 360Hz.
-  TA1CCR0 = 44444;  // Generate an interrupt every 2.778ms.
+  TA1CCR0 = 11111;  // Generate an interrupt every 2.778ms.
   TA1CCTL0 = CCIE;
   TA1CTL = TASSEL_2 + ID_0 + MC_1;
 }

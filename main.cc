@@ -14,6 +14,7 @@ enum UartCommand {
 
 volatile UartCommand current_command = kStop;
 int adc_sample = 0;
+int timer_count = 0;
 int timestamp = 0;
 
 UartQueue uart_queue;
@@ -48,6 +49,8 @@ int main(void) {
 __interrupt void USCI0RX_ISR(void) {
   if (UCA0RXBUF == kStart) {
     current_command = kStart;
+    timer_count = 0;
+    timestamp = 0;
   } else if (UCA0RXBUF == kStop) {
     current_command = kStop;
 
@@ -64,6 +67,12 @@ __interrupt void USCI0RX_ISR(void) {
 
 #pragma vector=TIMER1_A0_VECTOR
 __interrupt void Timer_A (void) {
+  if (++timer_count <= 3) {
+    return;
+  }
+
+  timer_count = 0;
+
   if (current_command == kStop) {
     // If the current command is STOP, don't take any measurements, and just
     // return.
@@ -79,7 +88,7 @@ __interrupt void Timer_A (void) {
   ADC10CTL0 |= ENC + ADC10SC;      //enable conversion and start conversion
   while(ADC10CTL1 & BUSY);
   adc_sample = ADC10MEM;
-  sprintf(buffer, "%d,%d\n", timestamp, adc_sample);
+  sprintf(buffer, "%u,%d\n", timestamp, adc_sample);
   uart_queue.Push(buffer);
 
   // The string that was just pushed to the queue needs to be sent by the main
