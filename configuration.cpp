@@ -16,8 +16,8 @@ void Configuration::ConfigureClocks() {
   // Note: If you modify clock speeds or sources, you need to change the UART
   // and timer configuration methods, too.
   WDTCTL = WDTPW + WDTHOLD; // Stop WDT.
-  DCOCTL = CALDCO_1MHZ;
-  BCSCTL1 = CALBC1_1MHZ; // Set DCO.
+  DCOCTL = CALDCO_16MHZ;
+  BCSCTL1 = CALBC1_16MHZ; // Set DCO.
 }
 
 void Configuration::ConfigurePorts() {
@@ -31,16 +31,16 @@ void Configuration::ConfigurePorts() {
 
 void Configuration::ConfigureUart() {
   UCA0CTL1 |= UCSSEL_2; // SMCLK.
-  UCA0BR0 = 0x08; // 1MHz 115200.
+  UCA0BR0 = 138; // 1MHz 115200.
   UCA0BR1 = 0x00; // 1MHz 115200.
-  UCA0MCTL = UCBRS2 + UCBRS0; // Modulation UCBRSx = 5.
+  UCA0MCTL = UCBRS_2 + UCBRS_1 + UCBRS_0; // Modulation UCBRSx = 5.
   UCA0CTL1 &= ~UCSWRST; // Initialize USCI state machine.
   UC0IE |= UCA0RXIE; // Enable USCI_A0 RX interrupt.
 }
 
 void Configuration::ConfigureTimer() {
   // Configure timer for 360Hz.
-  TA1CCR0 = 2778;  // Generate an interrupt every 2.778ms.
+  TA1CCR0 = 44444;  // Generate an interrupt every 2.778ms.
   TA1CCTL0 = CCIE;
   TA1CTL = TASSEL_2 + ID_0 + MC_1;
 }
