@@ -1,5 +1,9 @@
 #include <msp430g2553.h>
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+
 #include "configuration.h"
 #include "uart-queue.h"
 
@@ -16,6 +20,8 @@ volatile UartCommand current_command = kStop;
 int adc_sample = 0;
 int timer_count = 0;
 int timestamp = 0;
+char rx_buffer[15];
+int rx_index = 0;
 
 UartQueue uart_queue;
 
@@ -47,11 +53,25 @@ int main(void) {
 
 #pragma vector=USCIAB0RX_VECTOR
 __interrupt void USCI0RX_ISR(void) {
-  if (UCA0RXBUF == kStart) {
+  if (UCA0RXBUF != '\n' && UCA0RXBUF != '\r') {
+    rx_buffer[rx_index] = UCA0RXBUF;
+    ++rx_index;
+    return;
+  }
+
+  rx_buffer[rx_index] = '\000';
+  rx_index = 0;
+
+
+  if (rx_buffer[0] == kStart) {
     current_command = kStart;
-    timer_count = 0;
-    timestamp = 0;
-  } else if (UCA0RXBUF == kStop) {
+    char* tmp_command = strtok(rx_buffer, ",");
+    char* str_timestamp = strtok(NULL, ",");
+    char* str_timer_count = strtok(NULL, ",");
+
+    timestamp = atoi(str_timestamp);
+    timer_count = atoi(str_timer_count);
+  } else if (rx_buffer[0] == kStop) {
     current_command = kStop;
 
     // Add end of transmission (EOT) character to the queue.
