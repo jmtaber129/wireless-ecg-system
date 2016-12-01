@@ -18,8 +18,8 @@ enum UartCommand {
 
 volatile UartCommand current_command = kStop;
 int adc_sample = 0;
-int timer_count = 0;
-int timestamp = 0;
+volatile int timer_count = 0;
+volatile int timestamp = 0;
 char rx_buffer[15];
 int rx_index = 0;
 
@@ -62,16 +62,7 @@ __interrupt void USCI0RX_ISR(void) {
   rx_buffer[rx_index] = '\000';
   rx_index = 0;
 
-
-  if (rx_buffer[0] == kStart) {
-    current_command = kStart;
-    char* tmp_command = strtok(rx_buffer, ",");
-    char* str_timestamp = strtok(NULL, ",");
-    char* str_timer_count = strtok(NULL, ",");
-
-    timestamp = atoi(str_timestamp);
-    timer_count = atoi(str_timer_count);
-  } else if (rx_buffer[0] == kStop) {
+  if (rx_buffer[0] == kStop) {
     current_command = kStop;
 
     // Add end of transmission (EOT) character to the queue.
@@ -80,8 +71,19 @@ __interrupt void USCI0RX_ISR(void) {
     // Wake up from LPM so the EOT char can be transmitted.
     LPM0_EXIT;
   } else {
-    // Received character isn't a valid command.
-    // TODO(jmtaber129): Add invalid command error handling.
+    current_command = kStart;
+
+    if (rx_buffer[1] == '\000') {
+      timestamp = 0;
+      timer_count = 0;
+    } else {
+      char* tmp_command = strtok(rx_buffer, ",");
+      char* str_timestamp = strtok(NULL, ",");
+      char* str_timer_count = strtok(NULL, ",");
+
+      timestamp = atoi(str_timestamp);
+      timer_count = atoi(str_timer_count);
+    }
   }
 }
 
