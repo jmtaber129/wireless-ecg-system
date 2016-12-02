@@ -5,6 +5,8 @@
 #define RXLED BIT6
 #define TXD BIT2
 #define RXD BIT1
+#define SYNC_OUTPUT BIT4
+#define SYNC_INPUT BIT5
 
 class Configuration {
   public:

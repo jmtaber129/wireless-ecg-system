@@ -17,15 +17,20 @@ void Configuration::ConfigureClocks() {
   // and timer configuration methods, too.
   WDTCTL = WDTPW + WDTHOLD; // Stop WDT.
   DCOCTL = CALDCO_16MHZ;
-  BCSCTL1 = CALBC1_16MHZ; // Set DCO.
+  BCSCTL1 = CALBC1_16MHZ | XCAP_3; // Set DCO.
 }
 
 void Configuration::ConfigurePorts() {
   P2DIR |= 0xFF; // All P2.x outputs.
   P2OUT &= 0x00; // All P2.x reset.
-  P1SEL |= RXD + TXD + BIT5; // P1.1 = RXD, P1.2 = TXD. P1.5 = ADC.
+  P1SEL |= RXD + TXD + BIT3; // P1.1 = RXD, P1.2 = TXD. P1.5 = ADC.
   P1SEL2 |= RXD + TXD ; // P1.1 = RXD, P1.2=TXD.
-  P1DIR |= RXLED + TXLED;
+  P1DIR |= RXLED + TXLED + SYNC_OUTPUT;
+  P1REN = SYNC_INPUT;
+  P1OUT = SYNC_INPUT;
+  P1IE |= SYNC_INPUT;
+  P1IES |= SYNC_INPUT;
+  P1IFG = 0;
   P1OUT &= 0x00;
 }
 
@@ -40,9 +45,9 @@ void Configuration::ConfigureUart() {
 
 void Configuration::ConfigureTimer() {
   // Configure timer for 360Hz.
-  TA1CCR0 = 11111;  // Generate an interrupt every 2.778ms.
+  TA1CCR0 = 8;  // Generate an interrupt every 0.2778ms.
   TA1CCTL0 = CCIE;
-  TA1CTL = TASSEL_2 + ID_0 + MC_1;
+  TA1CTL = TASSEL_1 + ID_0 + MC_1;
 }
 
 void Configuration::ConfigureAdc(int* dtc_address) {

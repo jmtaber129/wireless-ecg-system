@@ -12,7 +12,8 @@ const char* kEot = "\004\n";
 
 enum UartCommand {
   kStart = 'a',
-  kStop = 'b'
+  kStop = 'b',
+  kSync = 's'
 };
 
 
@@ -22,6 +23,12 @@ volatile int timer_count = 0;
 volatile int timestamp = 0;
 char rx_buffer[15];
 int rx_index = 0;
+
+// True if the next timer interrupt should put the sync output high.  False if
+// the next timer interrupt should put the sync output high.
+bool sync = false;
+
+bool received_sync = false;
 
 UartQueue uart_queue;
 
@@ -70,13 +77,12 @@ __interrupt void USCI0RX_ISR(void) {
 
     // Wake up from LPM so the EOT char can be transmitted.
     LPM0_EXIT;
+  } else if (rx_buffer[0] == kSync) {
+    sync = true;
   } else {
     current_command = kStart;
 
-    if (rx_buffer[1] == '\000') {
-      timestamp = 0;
-      timer_count = 0;
-    } else {
+    if (rx_buffer[1] != '\000') {
       char* tmp_command = strtok(rx_buffer, ",");
       char* str_timestamp = strtok(NULL, ",");
       char* str_timer_count = strtok(NULL, ",");
@@ -87,21 +93,54 @@ __interrupt void USCI0RX_ISR(void) {
   }
 }
 
+#pragma vector=PORT1_VECTOR
+__interrupt void Port_1(void) {
+  if ((SYNC_INPUT & P1IFG) && (SYNC_INPUT & P1IN)) {
+    timestamp = 0;
+    timer_count = 0;
+  }
+  P1IFG = 0;
+}
+
 #pragma vector=TIMER1_A0_VECTOR
 __interrupt void Timer_A (void) {
-  if (++timer_count <= 3) {
+  if (SYNC_INPUT & P1IN) {
+    if (!received_sync) {
+      timestamp = 1;
+      timer_count = 0;
+      received_sync = true;
+    }
+  } else {
+    received_sync = false;
+  }
+
+  if (++timer_count < 10) {
     return;
   }
 
-  timer_count = 0;
+  // Handle sync pulse.
+  if (sync) {
+    P1OUT |= SYNC_OUTPUT;
+    timestamp = 0;
+    timer_count = 0;
+  } else {
+    P1OUT &= ~SYNC_OUTPUT;
+  }
+
+  sync = false;
+
+  timer_count = 1;
+  ++timestamp;
+
+  if (timestamp > 32000) {
+    timestamp = 0;
+  }
 
   if (current_command == kStop) {
     // If the current command is STOP, don't take any measurements, and just
     // return.
     return;
   }
-
-  ++timestamp;
 
   // Toggle P1.0 for debugging purposes.
   P1OUT ^= BIT0;
